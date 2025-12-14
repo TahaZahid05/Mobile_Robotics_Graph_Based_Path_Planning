@@ -6,12 +6,15 @@ from collections import deque
 import random
 
 class MazeSimulator:
-    def __init__(self, rows, cols, start, goal, initial_obstacles):
+    def __init__(self, rows, cols, start, goal, initial_obstacles, sensor_range = 3):
         self.rows = rows
         self.cols = cols
         self.start = start
         self.goal = goal
         self.initial_obstacles = initial_obstacles
+
+        # EXPERIMENT PARAMETER: How far the robot can see
+        self.sensor_range = sensor_range
         
         self.dstar = DStarLite(start[0], start[1], goal[0], goal[1], 
                                initial_obstacles, rows, cols)
@@ -30,19 +33,20 @@ class MazeSimulator:
         self.setup_plot()
         
     def setup_plot(self):
+        """Initializes the plotting environment, grid, and static elements."""
         self.ax.clear()
         self.ax.set_xlim(-0.5, self.cols - 0.5)
         self.ax.set_ylim(-0.5, self.rows - 0.5)
         self.ax.set_aspect('equal')
         self.ax.invert_yaxis()
         
-        # Grid lines
+        # Grid lines (light grey)
         for i in range(self.rows + 1):
             self.ax.axhline(i - 0.5, color='gray', linewidth=0.5, alpha=0.3)
         for i in range(self.cols + 1):
             self.ax.axvline(i - 0.5, color='gray', linewidth=0.5, alpha=0.3)
         
-        # Draw initial obstacles
+        # Draw initial obstacles (black squares)
         for obs in self.initial_obstacles:
             rect = patches.Rectangle((obs[1] - 0.5, obs[0] - 0.5), 1, 1, 
                                      linewidth=1, edgecolor='black', 
@@ -75,6 +79,7 @@ class MazeSimulator:
         self.ax.legend(loc='upper right')
         
     def onclick(self, event):
+        """Handles mouse clicks to add dynamic obstacles."""
         if event.inaxes != self.ax: return
         col = int(round(event.xdata))
         row = int(round(event.ydata))
@@ -97,11 +102,16 @@ class MazeSimulator:
         
 
     def get_obstacles_in_sensor_range(self, current_pos, sensor_range=3):
+        """
+        Simulates the robot's sensor. 
+        Returns obstacles that are within 'sensor_range' of the current position.
+        """
         new_obstacles = []
         for obs in self.user_obstacles:
-            dist = max(abs(obs.x - current_pos[0]), abs(obs.y - current_pos[1]))
+            dist = abs(obs.x - current_pos[0]) + abs(obs.y - current_pos[1])
             if dist <= sensor_range:
                 new_obstacles.append(obs)
+        # Remove detected obstacles from the list so we don't detect them twice
         for obs in new_obstacles:
             self.user_obstacles.remove(obs)
         return new_obstacles
@@ -125,7 +135,7 @@ class MazeSimulator:
             best_next = None
             min_val = float('inf')
             
-            # Find neighbor with min (cost + g)
+            # Find neighbor with lowest (EdgeCost + CostToGoal)
             for neighbor in neighbors:
                 cost = self.dstar.calculate_cost(curr, neighbor)
                 g_val = self.dstar.g[neighbor.x][neighbor.y]
@@ -136,7 +146,7 @@ class MazeSimulator:
                     best_next = neighbor
             
             if best_next is None or min_val == float('inf'):
-                break # No path known
+                break 
             
             curr = best_next
             steps += 1
@@ -174,19 +184,18 @@ class MazeSimulator:
         step = 0
         self.path = [self.start]
         
-        # Initial Compute
-        self.dstar.last = self.dstar.start
+        # --- INITIALIZATION ---
         self.dstar.initialize()
         self.dstar.computeShortestPath()
         
-        # Draw the initial plan before moving
         self.update_visualization()
-        plt.pause(1.0) # Pause so user can see initial plan
+        plt.pause(1.0) 
         
+        # --- MAIN LOOP ---
         while (self.dstar.start.x, self.dstar.start.y) != self.goal:
             step += 1
             
-            # Check if path exists
+            # 0. Check if path exists
             if self.dstar.g[self.dstar.start.x][self.dstar.start.y] == float('inf'):
                 print("\nNo path exists!")
                 self.ax.set_title('No Path Found!', fontsize=14, fontweight='bold', color='red')
@@ -203,17 +212,17 @@ class MazeSimulator:
                 for obs in new_obstacles:
                     self.dstar.obstacles.add((obs.x, obs.y))
                 
+                # Update D* Lite with new information
                 self.dstar.scan_for_changes(new_obstacles)
                 
-                # --- VISUALIZE REPLANNING ---
-                # This explicitly redraws the ORANGE line to show the new thought process
+                # Visualize replanning process
                 self.ax.set_title('Replanning...', fontsize=14, fontweight='bold', color='orange')
                 self.update_visualization() 
-                plt.pause(0.5) # Slight pause to emphasize the change
+                plt.pause(0.5) 
                 print("Replanning complete!")
                 self.ax.set_title(f'Step {step}: Moving...', fontsize=14, fontweight='bold')
             
-            # 3. Move Robot (Greedy step)
+            # 3. Move Robot
             temp_val = float('inf')
             best_node = None
             lst_start_neighbors = self.dstar.get_neighbors(self.dstar.start)
@@ -230,10 +239,10 @@ class MazeSimulator:
                 self.fig.canvas.draw()
                 return
             
+            # Update robot position
             self.dstar.start = best_node
             self.path.append((best_node.x, best_node.y))
             
-            # 4. Draw Step
             self.update_visualization()
         
         print(f"\nGoal reached in {step} steps!")
@@ -259,18 +268,27 @@ class MazeSimulator:
         self.kid = self.fig.canvas.mpl_connect('key_press_event', self.onkey)
         plt.show()
 
-# --- KEEP THE SOLVABLE MAZE GENERATOR ---
+
 def generate_solvable_maze(rows, cols, start, goal, obstacle_density=0.2):
+    """
+    Generates a random maze that is guaranteed to be solvable.
+    Strategy:
+    1. Randomly place obstacles based on density.
+    2. Check if a path exists using BFS.
+    3. If blocked, 'carve' a path by removing obstacles from Start to Goal.
+    """
     obstacles = set()
     total_cells = rows * cols
     num_obstacles = int(total_cells * obstacle_density)
     
+    # Random placement
     while len(obstacles) < num_obstacles:
         x = np.random.randint(0, rows)
         y = np.random.randint(0, cols)
         if (x, y) != start and (x, y) != goal:
             obstacles.add((x, y))
             
+    # BFS to check connectivity
     def has_path():
         queue = deque([start])
         visited = {start}
@@ -288,7 +306,7 @@ def generate_solvable_maze(rows, cols, start, goal, obstacle_density=0.2):
         print(f"Map generated (Density: {obstacle_density:.2f}) - Naturally solvable.")
         return list(obstacles)
 
-    print(f"Map blocked - Carving path...")
+    # Force a path if it doesn't exist
     curr = start
     while curr != goal:
         cx, cy = curr
@@ -306,11 +324,14 @@ def generate_solvable_maze(rows, cols, start, goal, obstacle_density=0.2):
     return list(obstacles)
 
 if __name__ == "__main__":
+    # Configuration
     ROWS = 20
     COLS = 25
     START = (1, 1)
     GOAL = (18, 23)
+    SENSOR_RANGE = 3
+    OBSTACLE_DENSITY = 0.3
     
-    INITIAL_OBSTACLES = generate_solvable_maze(ROWS, COLS, START, GOAL, obstacle_density=0.2)
-    simulator = MazeSimulator(ROWS, COLS, START, GOAL, INITIAL_OBSTACLES)
+    INITIAL_OBSTACLES = generate_solvable_maze(ROWS, COLS, START, GOAL, OBSTACLE_DENSITY)
+    simulator = MazeSimulator(ROWS, COLS, START, GOAL, INITIAL_OBSTACLES, SENSOR_RANGE)
     simulator.run()
