@@ -92,7 +92,7 @@ class DStarLite:
         return max(term_1, term_2)
 
     def calculate_cost(self, u, v):
-        if (v.x, v.y) in self.obstacles:
+        if (v.x, v.y) in self.obstacles or (u.x, u.y) in self.obstacles:
             return float('inf')
         return 1
     
@@ -131,6 +131,9 @@ class DStarLite:
         elif (self.g[s.x][s.y] == self.rhs[s.x][s.y] and self.contains(s)):
             self.remove(s)
 
+    def key_less_than(self, k1, k2):
+        return k1[0] < k2[0] or (k1[0] == k2[0] and k1[1] < k2[1])
+
     def computeShortestPath(self):
         while True:
             task, k_old = self.peek()
@@ -139,15 +142,14 @@ class DStarLite:
             
             k_start = self.calculate_key(self.start)
             
-            # Check termination condition
-            if (k_old >= k_start and 
+            if (not self.key_less_than(k_old, k_start) and 
                 self.rhs[self.start.x][self.start.y] == self.g[self.start.x][self.start.y]):
                 break
             
             u, k_old = self.pop()
             k_new = self.calculate_key(u)
 
-            if k_old < k_new:
+            if self.key_less_than(k_old, k_new):
                 self.push(u, k_new)
 
             elif self.g[u.x][u.y] > self.rhs[u.x][u.y]:
@@ -159,9 +161,8 @@ class DStarLite:
                     if curr != self.end:
                         edge_cost = self.calculate_cost(curr, u)
                         self.rhs[curr.x][curr.y] = min(self.rhs[curr.x][curr.y], 
-                                                       edge_cost + self.g[u.x][u.y])
+                                                    edge_cost + self.g[u.x][u.y])
                     self.updateVertex(curr)
-
             else:
                 g_old = self.g[u.x][u.y]
                 self.g[u.x][u.y] = float('inf')
@@ -193,7 +194,7 @@ class DStarLite:
         self.last = self.start
 
         for v in new_obstacles:
-            self.updateVertex(v)
+            # self.updateVertex(v)
             for u in self.get_neighbors(v):
                 c_old = 1 
                 c_new = float('inf')
