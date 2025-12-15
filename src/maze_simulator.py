@@ -4,6 +4,7 @@ import numpy as np
 from dstar_lite import DStarLite
 from collections import deque
 import random
+import time
 
 class MazeSimulator:
     def __init__(self, rows, cols, start, goal, initial_obstacles, sensor_range = 3):
@@ -179,14 +180,19 @@ class MazeSimulator:
         print("\n=== Starting D* Lite Path Planning ===")
         print(f"Start: {self.start}, Goal: {self.goal}")
         
-        self.fig.canvas.mpl_disconnect(self.cid)
         
         step = 0
         self.path = [self.start]
+
+        t0 = time.time()
         
         # --- INITIALIZATION ---
         self.dstar.initialize()
         self.dstar.computeShortestPath()
+
+        t1 = time.time()
+        initial_time_ms = (t1 - t0) * 1000
+        print(f"\n[PERFORMANCE] Initial Plan computed in: {initial_time_ms:.4f} ms")
         
         self.update_visualization()
         plt.pause(1.0) 
@@ -204,16 +210,21 @@ class MazeSimulator:
             
             # 1. Sense Obstacles
             current_pos = (self.dstar.start.x, self.dstar.start.y)
-            new_obstacles = self.get_obstacles_in_sensor_range(current_pos, sensor_range=3)
+            new_obstacles = self.get_obstacles_in_sensor_range(current_pos, sensor_range=self.sensor_range)
             
             # 2. Replan if needed
             if new_obstacles:
-                print(f"\nDetected {len(new_obstacles)} new obstacle(s)! Replanning...")
                 for obs in new_obstacles:
                     self.dstar.obstacles.add((obs.x, obs.y))
+
+                t0 = time.time()
                 
                 # Update D* Lite with new information
                 self.dstar.scan_for_changes(new_obstacles)
+
+                t1 = time.time()
+                replan_time_ms = (t1 - t0) * 1000
+                print(f"[PERFORMANCE] Replanning computed in:   {replan_time_ms:.4f} ms")
                 
                 # Visualize replanning process
                 self.ax.set_title('Replanning...', fontsize=14, fontweight='bold', color='orange')
@@ -324,14 +335,23 @@ def generate_solvable_maze(rows, cols, start, goal, obstacle_density=0.2):
     return list(obstacles)
 
 if __name__ == "__main__":
+    # Seed for reproducibility
+    SEED_VALUE = 35
+    np.random.seed(SEED_VALUE)
+    random.seed(SEED_VALUE)
+
     # Configuration
     ROWS = 20
     COLS = 25
-    START = (1, 1)
-    GOAL = (18, 23)
+    START = (10, 1)
+    GOAL = (10, 23)
     SENSOR_RANGE = 3
     OBSTACLE_DENSITY = 0.3
-    
+
+    # To reproduce experiment 1, use manual_obstacles instead of INITIAL_OBSTACLES and then draw the "C" shape
+    # manual_obstacles = []
+
+
     INITIAL_OBSTACLES = generate_solvable_maze(ROWS, COLS, START, GOAL, OBSTACLE_DENSITY)
     simulator = MazeSimulator(ROWS, COLS, START, GOAL, INITIAL_OBSTACLES, SENSOR_RANGE)
     simulator.run()
