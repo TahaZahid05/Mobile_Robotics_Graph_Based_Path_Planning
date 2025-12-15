@@ -348,10 +348,6 @@ if __name__ == "__main__":
     SENSOR_RANGE = 3
     OBSTACLE_DENSITY = 0.3
 
-    # To reproduce experiment 1, use manual_obstacles instead of INITIAL_OBSTACLES and then draw the "C" shape
-    # manual_obstacles = []
-
-
     INITIAL_OBSTACLES = generate_solvable_maze(ROWS, COLS, START, GOAL, OBSTACLE_DENSITY)
     simulator = MazeSimulator(ROWS, COLS, START, GOAL, INITIAL_OBSTACLES, SENSOR_RANGE)
     simulator.run()
