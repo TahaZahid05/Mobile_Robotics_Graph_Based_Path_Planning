@@ -23,6 +23,12 @@ Following are the implementation details:
 
   * **Motion Primitive:** The robot can move instantaneously North, South, East, or West.
   * **Constraint:** Diagonal movement is disabled to strictly prevent *corner cutting* (moving diagonally through a gap between two diagonal obstacles), ensuring collision-free trajectories in narrow corridors.
+* **Environmental Assumptions:**
+    * **Terrain:** **Flat and Even.** The environment is modeled as a binary occupancy grid where cells are either fully traversable ($Cost=1$) or fully blocked ($Cost=\infty$).
+    * **Structure:** Structured environment with discrete, static obstacles (walls) and dynamic obstacles introduced by the user.
+* **Sensor Suite:**
+    * **Type:** Simulated **Omnidirectional Proximity Sensor**.
+    * **Configuration:** The robot possesses a square sensor footprint defined by the variable `SENSOR_RANGE`. It can detect obstacles in line-of-sight within this Manhattan distance radius.
 * **Graph Construction:**
 
   * **Vertices (V):** Every cell in the grid.
@@ -134,7 +140,7 @@ We conducted three experiments to validate the algorithm's performance with resp
 
 ## References
 
-1. S. Koenig and M. Likhachev. *D* Lite.* AAAI/IAAI, 2002.
+1. S. Koenig and M. Likhachev. "D* Lite." AAAI/IAAI, 2002.
 2. H. Choset, K. M. Lynch, S. Hutchinson, G. A. Kantor, W. Burgard, L. E. Kavraki, and S. Thrun. Principles of Robot Motion: Theory, Algorithms, and Implementation. MIT Press, 2005.
 3. Atsushi Sakai et al. **PythonRobotics**: A Python code collection of robotics algorithms, including D* Lite path planning.  
    GitHub repository: https://github.com/AtsushiSakai/PythonRobotics  
