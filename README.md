@@ -79,7 +79,7 @@ python src/maze_simulator.py
 
 ## 6. Experimental Results
 
-We conducted three experiments to validate the algorithm's performance with respect to environmental variations and computational efficiency.
+We conducted two experiments to validate the algorithm's performance with respect to environmental variations and computational efficiency.
 
 ### Experiment 1: Sensor Range & Path Optimality
 
@@ -87,27 +87,15 @@ We conducted three experiments to validate the algorithm's performance with resp
 * **Procedure:** A U-shaped trap (local minimum) was placed in the environment. We compared a *blind* robot ($r = 1$) against a *far-sighted* robot ($r = 20$).
 * **Results:**
 
-  * **Short Range ($r = 2$):** The robot entered the trap, reached the dead end, and was forced to backtrack.
-  * **Long Range ($r = 15$):** The robot detected the concavity from the start node and planned an optimal path around it.
+  * **Short Range ($r = 1$):** The robot entered the trap, reached the dead end, and was forced to backtrack.
+  * **Long Range ($r = 20$):** The robot detected the concavity from the start node and planned an optimal path around it.
 * **Conclusion:** D* Lite guarantees optimality *given the current information*, but limited sensor data inevitably leads to longer total trajectories in complex environments.
 
-|                   Short Range (r = 2)                  |                  Long Range (r = 15)                 |
+|                   Short Range (r = 1)                  |                  Long Range (r = 20)                 |
 | :----------------------------------------------------: | :--------------------------------------------------: |
 | ![Short Range Result](results/exp1_short_range.png) | ![Long Range Result](results/exp1_long_range.png) |
 
-### Experiment 2: Dynamic Replanning Visualization
-
-* **Objective:** To demonstrate the algorithm's ability to repair paths in real time when new obstacles appear.
-* **Procedure:** The robot began moving on an optimal path. A user manually inserted an obstacle blocking the path.
-* **Observation:** The algorithm detected the collision, updated the edge costs, and the **orange dashed line** (planned path) instantaneously snapped to a new valid route.
-
-**Replanning Sequence:**
-
-![Replanning Step 1](results/exp2_replanning_1.png)
-![Replanning Step 2](results/exp2_replanning_2.png)
-![Replanning Step 3](results/exp2_replanning_3.png)
-
-### Experiment 3: Computational Efficiency Analysis
+### Experiment 2: Computational Efficiency Analysis
 
 * **Objective:** To quantify the speed advantage of D* Lite's incremental updates versus a full re-calculation.
 * **Procedure:** We timed the *initial plan* (cold start) and two subsequent *re-planning* events.  
@@ -119,7 +107,7 @@ We conducted three experiments to validate the algorithm's performance with resp
 | **Re-plan 1**    | **0.04 ms** | **~52× Faster**    | **Minor repair:** Local update affecting few nodes.                            |
 | **Re-plan 2**    | **1.26 ms** | **~1.6× Faster**   | **Major repair:** Obstacle blocked critical path; larger propagation required. |
 
-### Experiment 3: Visual Results
+### Experiment 2: Visual Results
 
 **Environment Map**
 
